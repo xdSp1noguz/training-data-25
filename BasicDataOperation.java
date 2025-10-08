@@ -38,12 +38,9 @@ public class BasicDataOperation {
     LocalDateTime[] dateTimeArray;
 
     private static final String SEPARATOR = "\n" + "=".repeat(80) + "\n";
-    private static final String USAGE_MESSAGE = """
-        Використання: java BasicDataOperation <пошукове-значення>
-               
-        Приклад:
-          java BasicDataOperation "2025-01-02T20:42:25Z"
-        """;
+    private static final String USAGE_MESSAGE = "Використання: java BasicDataOperation <пошукове-значення> \n" +
+"Приклад:\n" +
+"  java BasicDataOperation \"2025-01-02T20:42:25Z\"";
 
     public static void main(String[] args) {
         if (args.length != 1) {
