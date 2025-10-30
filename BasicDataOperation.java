@@ -1,17 +1,12 @@
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.PriorityQueue;
-import java.util.Queue;
 
 /**
  * Загальний клас BasicDataOperation координує роботу різних структур даних.
  * 
  * <p>Цей клас служить центральною точкою для демонстрації операцій з різними
  * колекціями Java: List, Queue та Set. Він об'єднує функціональність всіх
- * спеціалізованих класів для комплексного аналізу даних LocalDateTime.</p>
+ * спеціалізованих класів для комплексного аналізу даних LocalDate.</p>
  * 
  * <p>Основні можливості:</p>
  * <ul>
@@ -24,23 +19,23 @@ import java.util.Queue;
  * <p>Приклад використання:</p>
  * <pre>
  * {@code
- * java BasicDataOperation "2024-03-16T00:12:38Z" list
- * java BasicDataOperation "2024-03-16T00:12:38Z" queue  
- * java BasicDataOperation "2024-03-16T00:12:38Z" set
- * java BasicDataOperation "2024-03-16T00:12:38Z" all
+ * java BasicDataOperation "2024-03-16" list
+ * java BasicDataOperation "2024-03-16" queue  
+ * java BasicDataOperation "2024-03-16" set
+ * java BasicDataOperation "2024-03-16" all
  * }
  * </pre>
  */
 public class BasicDataOperation {
-    static final String PATH_TO_DATA_FILE = "list/LocalDateTime.data";
+    static final String PATH_TO_DATA_FILE = "list/LocalDate.data.sorted";
 
-    LocalDateTime dateTimeValueToSearch;
-    LocalDateTime[] dateTimeArray;
+    LocalDate dateTimeValueToSearch;
+    LocalDate[] dateTimeArray;
 
     private static final String SEPARATOR = "\n" + "=".repeat(80) + "\n";
     private static final String USAGE_MESSAGE = "Використання: java BasicDataOperation <пошукове-значення> \n" +
 "Приклад:\n" +
-"  java BasicDataOperation \"2025-01-02T20:42:25Z\"";
+"  java BasicDataOperation \"2025-01-02\"         // дата у форматі YYYY-MM-DD";
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -52,9 +47,13 @@ public class BasicDataOperation {
 
         // Валідація введеного значення дати
         try {
-            LocalDateTime.parse(searchValue, DateTimeFormatter.ISO_DATE_TIME);
+            // Если в строке есть 'T' (разделитель даты и времени), берём только часть с датой
+            if (searchValue.contains("T")) {
+                searchValue = searchValue.split("T")[0];
+            }
+            LocalDate.parse(searchValue, DateTimeFormatter.ISO_DATE);
         } catch (Exception e) {
-            System.out.println("Помилка: Невірний формат дати-часу. Використовуйте ISO формат (наприклад: 2024-03-16T00:12:38Z)");
+            System.out.println("Помилка: Невірний формат дати. Використовуйте ISO формат дати (наприклад: 2024-03-16)");
             return;
         }
 
@@ -69,12 +68,13 @@ public class BasicDataOperation {
      */
     private void executeOperations(String[] args) {
         System.out.println(SEPARATOR);
-        System.out.println("🚀 РОЗПОЧАТО АНАЛІЗ ДАНИХ LocalDateTime 🚀");
+            System.out.println("🚀 РОЗПОЧАТО АНАЛІЗ ДАНИХ LocalDate 🚀");
         System.out.println("Пошуковий параметр: " + args[0]);
+        System.out.println("Файл даних: " + PATH_TO_DATA_FILE);
         System.out.println(SEPARATOR);
         
         // Підготовка даних та перевірка формату
-        dateTimeValueToSearch = LocalDateTime.parse(args[0], DateTimeFormatter.ISO_DATE_TIME);
+            dateTimeValueToSearch = LocalDate.parse(args[0], DateTimeFormatter.ISO_DATE);
         dateTimeArray = DataFileHandler.loadArrayFromFile(PATH_TO_DATA_FILE);
         
         runAllOperations();
@@ -91,6 +91,7 @@ public class BasicDataOperation {
      */
     private void runListOperations() {
         System.out.println("📋 ОБРОБКА ДАНИХ З ВИКОРИСТАННЯМ LIST");
+        System.out.println("Розмір даних: " + dateTimeArray.length + " записів");
         System.out.println("-".repeat(50));
         
         try {
@@ -110,6 +111,7 @@ public class BasicDataOperation {
      */
     private void runQueueOperations() {
         System.out.println("🔄 ОБРОБКА ДАНИХ З ВИКОРИСТАННЯМ QUEUE");
+        System.out.println("Розмір даних: " + dateTimeArray.length + " записів");
         System.out.println("-".repeat(50));
         
         try {
@@ -129,6 +131,7 @@ public class BasicDataOperation {
      */
     private void runSetOperations() {
         System.out.println("🔍 ОБРОБКА ДАНИХ З ВИКОРИСТАННЯМ SET");
+        System.out.println("Розмір даних: " + dateTimeArray.length + " записів");
         System.out.println("-".repeat(50));
         
         try {
