@@ -2,9 +2,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.text.Collator;
+import java.util.Locale;
 
 /**
  * Клас BasicDataOperationUsingMap реалізує операції з колекціями типу Map для зберігання пар ключ-значення.
@@ -22,22 +24,24 @@ import java.util.TreeMap;
  * </ul>
  */
 public class BasicDataOperationUsingMap {
-    private final Pet KEY_TO_SEARCH_AND_DELETE = new Pet("Луна", "Полярна сова");
-    private final Pet KEY_TO_ADD = new Pet("Кір", "Сова вухата");
+    // Ключ для пошуку/видалення за віком (2) — nickname == null означає пошук по age
+    private final Cat KEY_TO_SEARCH_AND_DELETE = new Cat(2);
+    // Додаємо Cat{age=16} -> "Джон"
+    private final Cat KEY_TO_ADD = new Cat(16);
 
-    private final String VALUE_TO_SEARCH_AND_DELETE = "Олена";
-    private final String VALUE_TO_ADD = "Богдан";
+    private final String VALUE_TO_SEARCH_AND_DELETE = "Стефанія";
+    private final String VALUE_TO_ADD = "Джон";
 
-    private Hashtable<Pet, String> hashtable;
-    private TreeMap<Pet, String> treeMap;
+    private Hashtable<Cat, String> hashtable;
+    private LinkedHashMap<Cat, String> linkedHashMap;
 
     /**
      * Компаратор для сортування Map.Entry за значеннями String.
      * Використовує метод String.compareTo() для порівняння імен власників.
      */
-    static class OwnerValueComparator implements Comparator<Map.Entry<Pet, String>> {
+    static class OwnerValueComparator implements Comparator<Map.Entry<Cat, String>> {
         @Override
-        public int compare(Map.Entry<Pet, String> e1, Map.Entry<Pet, String> e2) {
+        public int compare(Map.Entry<Cat, String> e1, Map.Entry<Cat, String> e2) {
             String v1 = e1.getValue();
             String v2 = e2.getValue();
             if (v1 == null && v2 == null) return 0;
@@ -48,148 +52,112 @@ public class BasicDataOperationUsingMap {
     }
 
     /**
-     * Внутрішній клас Pet для зберігання інформації про домашню тварину.
+     * Внутрішній клас Cat для зберігання інформації про домашню тварину.
      * 
-     * Реалізує Comparable<Pet> для визначення природного порядку сортування.
+     * Реалізує Comparable<Cat> для визначення природного порядку сортування.
      * Природний порядок: спочатку за кличкою (nickname) за зростанням, потім за видом (species) за спаданням.
      */
-    public static class Pet implements Comparable<Pet> {
+    public static class Cat implements Comparable<Cat> {
+        // Характеристика — вік тварини і кличка (nickname)
+        private final Integer age;
         private final String nickname;
-        private final String species;
 
-        public Pet(String nickname) {
+        public Cat(Integer age) {
+            this.age = age;
+            this.nickname = null;
+        }
+
+        public Cat(Integer age, String nickname) {
+            this.age = age;
             this.nickname = nickname;
-            this.species = null;
         }
 
-        public Pet(String nickname, String species) {
-            this.nickname = nickname;
-            this.species = species;
+        public Integer getAge() {
+            return age;
         }
 
-        public String getNickname() { 
-            return nickname; 
-        }
-
-        public String getSpecies() {
-            return species;
+        public String getNickname() {
+            return nickname;
         }
 
         /**
-         * Порівнює цей об'єкт Pet з іншим для визначення порядку сортування.
-         * Природний порядок: спочатку за кличкою (nickname) за зростанням, потім за видом (species) за спаданням.
-         * 
-         * @param other Pet об'єкт для порівняння
-         * @return негативне число, якщо цей Pet < other; 
-         *         0, якщо цей Pet == other; 
-         *         позитивне число, якщо цей Pet > other
-         * 
-         * Критерій порівняння: поля nickname (кличка) за зростанням та species (вид) за спаданням.
-         * 
-         * Цей метод використовується:
-         * - TreeMap для автоматичного сортування ключів Pet за nickname (зростання), потім за species (спадання)
-         * - Collections.sort() для сортування Map.Entry за ключами Pet
-         * - Collections.binarySearch() для пошуку в відсортованих колекціях
+         * Природний порядок для Cat — спочатку за кличкою (nickname) за зростанням
+         * згідно української локалі (A → Я), потім за віком (age) за зростанням.
+         *
+         * Null-поведінка:
+         * - null nickname вважаємо "більшим", щоб він опинявся в кінці при сортуванні A→Я;
+         * - null age вважаємо меншим за будь-який не-null age (тому йде першим серед однакових nickname).
          */
         @Override
-        public int compareTo(Pet other) {
+        public int compareTo(Cat other) {
             if (other == null) return 1;
-            
-            // Спочатку порівнюємо за кличкою (за зростанням)
-            int nicknameComparison = 0;
+
+            // Collator для української локалі — коректне порівняння кирилиці
+            Collator collator = Collator.getInstance(new Locale("uk"));
+            collator.setStrength(Collator.PRIMARY); // регистронезависимое сравнение
+
+            // 1) Порівняння по nickname — за зростанням (A → Я)
             if (this.nickname == null && other.nickname == null) {
-                nicknameComparison = 0;
+                // продовжимо до порівняння age
             } else if (this.nickname == null) {
-                nicknameComparison = -1;
+                // розміщуємо null після не-null => вважаємо його "більшим"
+                return 1;
             } else if (other.nickname == null) {
-                nicknameComparison = 1;
+                return -1;
             } else {
-                nicknameComparison = this.nickname.compareTo(other.nickname);
+                // Для порядку від Я до А: інвертуємо аргументы collator (other vs this)
+                int nickComp = collator.compare(other.nickname, this.nickname);
+                if (nickComp != 0) return nickComp;
             }
-            
-            // Якщо клички різні, повертаємо результат
-            if (nicknameComparison != 0) {
-                return nicknameComparison;
-            }
-            
-            // Якщо клички однакові, порівнюємо за видом (за спаданням - інвертуємо результат)
-            if (this.species == null && other.species == null) return 0;
-            if (this.species == null) return 1;  // null йде в кінець при спаданні
-            if (other.species == null) return -1;
-            return other.species.compareTo(this.species);  // Інвертоване порівняння для спадання
+
+            // 2) Якщо nickname рівні (або обидва null) — порівнюємо по age за зростанням
+            if (this.age == null && other.age == null) return 0;
+            if (this.age == null) return -1;
+            if (other.age == null) return 1;
+            return Integer.compare(this.age, other.age);
         }
 
         /**
-         * Перевіряє рівність цього Pet з іншим об'єктом.
-         * Два Pet вважаються рівними, якщо їх клички (nickname) та види (species) однакові.
-         * 
-         * @param obj об'єкт для порівняння
-         * @return true, якщо об'єкти рівні; false в іншому випадку
-         * 
-         * Критерій рівності: поля nickname (кличка) та species (вид).
-         * 
-         * Важливо: метод узгоджений з compareTo() - якщо equals() повертає true,
-         * то compareTo() повертає 0, оскільки обидва методи порівнюють за nickname та species.
+         * Рівність визначається по полях age та nickname.
          */
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
-            Pet pet = (Pet) obj;
-            
-            boolean nicknameEquals = nickname != null ? nickname.equals(pet.nickname) : pet.nickname == null;
-            boolean speciesEquals = species != null ? species.equals(pet.species) : pet.species == null;
-            
-            return nicknameEquals && speciesEquals;
+            Cat cat = (Cat) obj;
+            boolean ageEq = age != null ? age.equals(cat.age) : cat.age == null;
+            boolean nickEq = nickname != null ? nickname.equals(cat.nickname) : cat.nickname == null;
+            return ageEq && nickEq;
         }
 
         /**
-         * Повертає хеш-код для цього Pet.
-         * 
-         * @return хеш-код, обчислений на основі nickname та species
-         * 
-         * Базується на полях nickname та species для узгодженості з equals().
-         * 
-         * Важливо: узгоджений з equals() - якщо два Pet рівні за equals()
-         * (мають однакові nickname та species), вони матимуть однаковий hashCode().
+         * Хеш-код на основі age та nickname.
          */
         @Override
         public int hashCode() {
-            // Початкове значення: хеш-код поля nickname (або 0, якщо nickname == null)
-            int result = nickname != null ? nickname.hashCode() : 0;
-            
-            // Комбінуємо хеш-коди полів за формулою: result = 31 * result + hashCode(поле)
-            // Множник 31 - просте число, яке дає хороше розподілення хеш-кодів
-            // і оптимізується JVM як (result << 5) - result
-            // Додаємо хеш-код виду (або 0, якщо species == null) до загального результату
-            result = 31 * result + (species != null ? species.hashCode() : 0);
-            
+            int result = age != null ? age.hashCode() : 0;
+            result = 31 * result + (nickname != null ? nickname.hashCode() : 0);
             return result;
         }
 
         /**
-         * Повертає строкове представлення Pet.
-         * 
-         * @return кличка тварини (nickname), вид (species) та hashCode
+         * Формат виводу: Cat{age='4', nickname='Тум'}
          */
         @Override
         public String toString() {
-            if (species != null) {
-                return "Pet{nickname='" + nickname + "', species='" + species + "', hashCode=" + hashCode() + "}";
-            }
-            return "Pet{nickname='" + nickname + "', hashCode=" + hashCode() + "}";
+            return "Cat{age='" + (age != null ? age.toString() : "null") + "', nickname='" + (nickname != null ? nickname : "null") + "'}";
         }
     }
 
     /**
      * Конструктор, який ініціалізує об'єкт з готовими даними.
      * 
-     * @param hashtable Hashtable з початковими даними (ключ: Pet, значення: ім'я власника)
-     * @param treeMap TreeMap з початковими даними (ключ: Pet, значення: ім'я власника)
+     * @param hashtable Hashtable з початковими даними (ключ: Cat, значення: ім'я власника)
+     * @param linkedHashMap LinkedHashMap з початковими даними (ключ: Cat, значення: ім'я власника)
      */
-    BasicDataOperationUsingMap(Hashtable<Pet, String> hashtable, TreeMap<Pet, String> treeMap) {
+    BasicDataOperationUsingMap(Hashtable<Cat, String> hashtable, LinkedHashMap<Cat, String> linkedHashMap) {
         this.hashtable = hashtable;
-        this.treeMap = treeMap;
+        this.linkedHashMap = linkedHashMap;
     }
     
     /**
@@ -221,21 +189,20 @@ public class BasicDataOperationUsingMap {
                
         System.out.println("Кінцевий розмір Hashtable: " + hashtable.size());
 
-        // Потім обробляємо TreeMap
-        System.out.println("\n\n========= Операції з TreeMap =========");
-        System.out.println("Початковий розмір TreeMap: " + treeMap.size());
+        // Потім обробляємо LinkedHashMap
+        System.out.println("\n\n========= Операції з LinkedHashMap =========");
+        System.out.println("Початковий розмір LinkedHashMap: " + linkedHashMap.size());
         
-        findByKeyInTreeMap();
-        findByValueInTreeMap();
+        findByKeyInLinkedHashMap();
+        findByValueInLinkedHashMap();
 
-        printTreeMap();
-
-        addEntryToTreeMap();
+        printLinkedHashMap();
         
-        removeByKeyFromTreeMap();
-        removeByValueFromTreeMap();
+        addEntryToLinkedHashMap();
         
-        System.out.println("Кінцевий розмір TreeMap: " + treeMap.size());
+        removeByKeyFromLinkedHashMap();
+        removeByValueFromLinkedHashMap();
+        System.out.println("Кінцевий розмір LinkedHashMap: " + linkedHashMap.size());
     }
 
 
@@ -249,7 +216,7 @@ public class BasicDataOperationUsingMap {
         System.out.println("\n=== Пари ключ-значення в Hashtable ===");
         long timeStart = System.nanoTime();
 
-        for (Map.Entry<Pet, String> entry : hashtable.entrySet()) {
+        for (Map.Entry<Cat, String> entry : hashtable.entrySet()) {
             System.out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
 
@@ -258,19 +225,19 @@ public class BasicDataOperationUsingMap {
 
     /**
      * Сортує Hashtable за ключами.
-     * Використовує Collections.sort() з природним порядком Pet (Pet.compareTo()).
+     * Використовує Collections.sort() з природним порядком Cat (Cat.compareTo()).
      * Перезаписує hashtable відсортованими даними.
      */
     private void sortHashtable() {
         long timeStart = System.nanoTime();
 
-        // Створюємо список ключів і сортуємо за природним порядком Pet
-        List<Pet> sortedKeys = new ArrayList<>(hashtable.keySet());
+        // Створюємо список ключів і сортуємо за природним порядком Cat
+        List<Cat> sortedKeys = new ArrayList<>(hashtable.keySet());
         Collections.sort(sortedKeys);
         
         // Створюємо нову Hashtable з відсортованими ключами
-        Hashtable<Pet, String> sortedHashtable = new Hashtable<>();
-        for (Pet key : sortedKeys) {
+        Hashtable<Cat, String> sortedHashtable = new Hashtable<>();
+        for (Cat key : sortedKeys) {
             sortedHashtable.put(key, hashtable.get(key));
         }
         
@@ -282,18 +249,37 @@ public class BasicDataOperationUsingMap {
 
     /**
      * Здійснює пошук елемента за ключем в Hashtable.
-     * Використовує Pet.hashCode() та Pet.equals() для пошуку.
+     * Використовує Cat.hashCode() та Cat.equals() для пошуку.
      */
     void findByKeyInHashtable() {
         long timeStart = System.nanoTime();
 
-        boolean found = hashtable.containsKey(KEY_TO_SEARCH_AND_DELETE);
+        String foundOwner = null;
+        Cat foundKey = null;
+
+        // Якщо nickname в ключі не вказано -> виконуємо пошук по age
+        if (KEY_TO_SEARCH_AND_DELETE.getNickname() == null) {
+            for (Map.Entry<Cat, String> entry : hashtable.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getAge() != null && KEY_TO_SEARCH_AND_DELETE.getAge() != null
+                        && k.getAge().equals(KEY_TO_SEARCH_AND_DELETE.getAge())) {
+                    foundOwner = entry.getValue();
+                    foundKey = k;
+                    break;
+                }
+            }
+        } else {
+            boolean found = hashtable.containsKey(KEY_TO_SEARCH_AND_DELETE);
+            if (found) {
+                foundOwner = hashtable.get(KEY_TO_SEARCH_AND_DELETE);
+                foundKey = KEY_TO_SEARCH_AND_DELETE;
+            }
+        }
 
         PerformanceTracker.displayOperationTime(timeStart, "пошук за ключем в Hashtable");
 
-        if (found) {
-            String value = hashtable.get(KEY_TO_SEARCH_AND_DELETE);
-            System.out.println("Елемент з ключем '" + KEY_TO_SEARCH_AND_DELETE + "' знайдено. Власник: " + value);
+        if (foundOwner != null) {
+            System.out.println("Елемент з ключем '" + (foundKey != null ? foundKey : KEY_TO_SEARCH_AND_DELETE) + "' знайдено. Власник: " + foundOwner);
         } else {
             System.out.println("Елемент з ключем '" + KEY_TO_SEARCH_AND_DELETE + "' відсутній в Hashtable.");
         }
@@ -307,13 +293,13 @@ public class BasicDataOperationUsingMap {
         long timeStart = System.nanoTime();
 
         // Створюємо список Entry та сортуємо за значеннями
-        List<Map.Entry<Pet, String>> entries = new ArrayList<>(hashtable.entrySet());
+        List<Map.Entry<Cat, String>> entries = new ArrayList<>(hashtable.entrySet());
         OwnerValueComparator comparator = new OwnerValueComparator();
         Collections.sort(entries, comparator);
 
         // Створюємо тимчасовий Entry для пошуку
-        Map.Entry<Pet, String> searchEntry = new Map.Entry<Pet, String>() {
-            public Pet getKey() { return null; }
+        Map.Entry<Cat, String> searchEntry = new Map.Entry<Cat, String>() {
+            public Cat getKey() { return null; }
             public String getValue() { return VALUE_TO_SEARCH_AND_DELETE; }
             public String setValue(String value) { return null; }
         };
@@ -323,8 +309,8 @@ public class BasicDataOperationUsingMap {
         PerformanceTracker.displayOperationTime(timeStart, "бінарний пошук за значенням в Hashtable");
 
         if (position >= 0) {
-            Map.Entry<Pet, String> foundEntry = entries.get(position);
-            System.out.println("Власника '" + VALUE_TO_SEARCH_AND_DELETE + "' знайдено. Pet: " + foundEntry.getKey());
+            Map.Entry<Cat, String> foundEntry = entries.get(position);
+            System.out.println("Власника '" + VALUE_TO_SEARCH_AND_DELETE + "' знайдено. Cat: " + foundEntry.getKey());
         } else {
             System.out.println("Власник '" + VALUE_TO_SEARCH_AND_DELETE + "' відсутній в Hashtable.");
         }
@@ -340,7 +326,7 @@ public class BasicDataOperationUsingMap {
 
         PerformanceTracker.displayOperationTime(timeStart, "додавання запису до Hashtable");
 
-        System.out.println("Додано новий запис: Pet='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
+        System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
     }
 
     /**
@@ -348,16 +334,29 @@ public class BasicDataOperationUsingMap {
      */
     void removeByKeyFromHashtable() {
         long timeStart = System.nanoTime();
+        List<Cat> toRemove = new ArrayList<>();
 
-        String removedValue = hashtable.remove(KEY_TO_SEARCH_AND_DELETE);
+        if (KEY_TO_SEARCH_AND_DELETE.getNickname() == null) {
+            for (Map.Entry<Cat, String> entry : hashtable.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getAge() != null && KEY_TO_SEARCH_AND_DELETE.getAge() != null
+                        && k.getAge().equals(KEY_TO_SEARCH_AND_DELETE.getAge())) {
+                    toRemove.add(k);
+                }
+            }
+        } else {
+            String removedValue = hashtable.remove(KEY_TO_SEARCH_AND_DELETE);
+            if (removedValue != null) {
+                System.out.println("Видалено запис з ключем '" + KEY_TO_SEARCH_AND_DELETE + "'. Власник був: " + removedValue);
+            }
+        }
+
+        for (Cat k : toRemove) {
+            String removed = hashtable.remove(k);
+            System.out.println("Видалено запис з ключем '" + k + "'. Власник був: " + removed);
+        }
 
         PerformanceTracker.displayOperationTime(timeStart, "видалення за ключем з Hashtable");
-
-        if (removedValue != null) {
-            System.out.println("Видалено запис з ключем '" + KEY_TO_SEARCH_AND_DELETE + "'. Власник був: " + removedValue);
-        } else {
-            System.out.println("Ключ '" + KEY_TO_SEARCH_AND_DELETE + "' не знайдено для видалення.");
-        }
     }
 
     /**
@@ -366,14 +365,14 @@ public class BasicDataOperationUsingMap {
     void removeByValueFromHashtable() {
         long timeStart = System.nanoTime();
 
-        List<Pet> keysToRemove = new ArrayList<>();
-        for (Map.Entry<Pet, String> entry : hashtable.entrySet()) {
+        List<Cat> keysToRemove = new ArrayList<>();
+        for (Map.Entry<Cat, String> entry : hashtable.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(VALUE_TO_SEARCH_AND_DELETE)) {
                 keysToRemove.add(entry.getKey());
             }
         }
         
-        for (Pet key : keysToRemove) {
+        for (Cat key : keysToRemove) {
             hashtable.remove(key);
         }
 
@@ -382,121 +381,151 @@ public class BasicDataOperationUsingMap {
         System.out.println("Видалено " + keysToRemove.size() + " записів з власником '" + VALUE_TO_SEARCH_AND_DELETE + "'");
     }
 
-    // ===== Методи для TreeMap =====
+    // ===== Методи для LinkedHashMap =====
 
     /**
-     * Виводить вміст TreeMap.
-     * TreeMap автоматично відсортована за ключами (Pet nickname за зростанням, species за спаданням).
+     * Виводить вміст LinkedHashMap.
+     * LinkedHashMap зберігає порядок додавання елементів.
      */
-    private void printTreeMap() {
-        System.out.println("\n=== Пари ключ-значення в TreeMap ===");
+    private void printLinkedHashMap() {
+        System.out.println("\n=== Пари ключ-значення в LinkedHashMap ===");
 
         long timeStart = System.nanoTime();
-        for (Map.Entry<Pet, String> entry : treeMap.entrySet()) {
+        for (Map.Entry<Cat, String> entry : linkedHashMap.entrySet()) {
             System.out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
 
-        PerformanceTracker.displayOperationTime(timeStart, "виведення пар ключ-значення в TreeMap");
+        PerformanceTracker.displayOperationTime(timeStart, "виведення пар ключ-значення в LinkedHashMap");
     }
 
     /**
-     * Здійснює пошук елемента за ключем в TreeMap.
-     * Використовує Pet.compareTo() для навігації по дереву.
+     * Здійснює пошук елемента за ключем в LinkedHashMap.
+     * Використовує послідовний перебір елементів.
      */
-    void findByKeyInTreeMap() {
+    void findByKeyInLinkedHashMap() {
         long timeStart = System.nanoTime();
+        String foundOwner = null;
+        Cat foundKey = null;
 
-        boolean found = treeMap.containsKey(KEY_TO_SEARCH_AND_DELETE);
+        if (KEY_TO_SEARCH_AND_DELETE.getNickname() == null) {
+            for (Map.Entry<Cat, String> entry : linkedHashMap.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getAge() != null && KEY_TO_SEARCH_AND_DELETE.getAge() != null
+                        && k.getAge().equals(KEY_TO_SEARCH_AND_DELETE.getAge())) {
+                    foundOwner = entry.getValue();
+                    foundKey = k;
+                    break;
+                }
+            }
+        } else {
+            boolean found = linkedHashMap.containsKey(KEY_TO_SEARCH_AND_DELETE);
+            if (found) {
+                foundOwner = linkedHashMap.get(KEY_TO_SEARCH_AND_DELETE);
+                foundKey = KEY_TO_SEARCH_AND_DELETE;
+            }
+        }
 
-        PerformanceTracker.displayOperationTime(timeStart, "пошук за ключем в TreeMap");
+        PerformanceTracker.displayOperationTime(timeStart, "пошук за ключем в LinkedHashMap");
 
-        if (found) {
-            String value = treeMap.get(KEY_TO_SEARCH_AND_DELETE);
-            System.out.println("Елемент з ключем '" + KEY_TO_SEARCH_AND_DELETE + "' знайдено. Власник: " + value);
+        if (foundOwner != null) {
+            System.out.println("Елемент з ключем '" + (foundKey != null ? foundKey : KEY_TO_SEARCH_AND_DELETE) + "' знайдено. Власник: " + foundOwner);
         } else {
             System.out.println("Елемент з ключем '" + KEY_TO_SEARCH_AND_DELETE + "' відсутній в TreeMap.");
         }
     }
 
     /**
-     * Здійснює пошук елемента за значенням в TreeMap.
+     * Здійснює пошук елемента за значенням в LinkedHashMap.
      * Сортує список Map.Entry за значеннями та використовує бінарний пошук.
      */
-    void findByValueInTreeMap() {
+    void findByValueInLinkedHashMap() {
         long timeStart = System.nanoTime();
 
         // Створюємо список Entry та сортуємо за значеннями
-        List<Map.Entry<Pet, String>> entries = new ArrayList<>(treeMap.entrySet());
+        List<Map.Entry<Cat, String>> entries = new ArrayList<>(linkedHashMap.entrySet());
         OwnerValueComparator comparator = new OwnerValueComparator();
         Collections.sort(entries, comparator);
 
         // Створюємо тимчасовий Entry для пошуку
-        Map.Entry<Pet, String> searchEntry = new Map.Entry<Pet, String>() {
-            public Pet getKey() { return null; }
+        Map.Entry<Cat, String> searchEntry = new Map.Entry<Cat, String>() {
+            public Cat getKey() { return null; }
             public String getValue() { return VALUE_TO_SEARCH_AND_DELETE; }
             public String setValue(String value) { return null; }
         };
 
         int position = Collections.binarySearch(entries, searchEntry, comparator);
 
-        PerformanceTracker.displayOperationTime(timeStart, "бінарний пошук за значенням в TreeMap");
+        PerformanceTracker.displayOperationTime(timeStart, "бінарний пошук за значенням в LinkedHashMap");
 
         if (position >= 0) {
-            Map.Entry<Pet, String> foundEntry = entries.get(position);
-            System.out.println("Власника '" + VALUE_TO_SEARCH_AND_DELETE + "' знайдено. Pet: " + foundEntry.getKey());
+            Map.Entry<Cat, String> foundEntry = entries.get(position);
+            System.out.println("Власника '" + VALUE_TO_SEARCH_AND_DELETE + "' знайдено. Cat: " + foundEntry.getKey());
         } else {
-            System.out.println("Власник '" + VALUE_TO_SEARCH_AND_DELETE + "' відсутній в TreeMap.");
+            System.out.println("Власник '" + VALUE_TO_SEARCH_AND_DELETE + "' відсутній в LinkedHashMap.");
         }
     }
 
     /**
-     * Додає новий запис до TreeMap.
+     * Додає новий запис до LinkedHashMap.
      */
-    void addEntryToTreeMap() {
+    void addEntryToLinkedHashMap() {
         long timeStart = System.nanoTime();
 
-        treeMap.put(KEY_TO_ADD, VALUE_TO_ADD);
+        linkedHashMap.put(KEY_TO_ADD, VALUE_TO_ADD);
 
-        PerformanceTracker.displayOperationTime(timeStart, "додавання запису до TreeMap");
+        PerformanceTracker.displayOperationTime(timeStart, "додавання запису до LinkedHashMap");
 
-        System.out.println("Додано новий запис: Pet='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
+        System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
     }
 
     /**
-     * Видаляє запис з TreeMap за ключем.
+     * Видаляє запис з LinkedHashMap за ключем.
      */
-    void removeByKeyFromTreeMap() {
+    void removeByKeyFromLinkedHashMap() {
         long timeStart = System.nanoTime();
+        List<Cat> toRemove = new ArrayList<>();
 
-        String removedValue = treeMap.remove(KEY_TO_SEARCH_AND_DELETE);
-
-        PerformanceTracker.displayOperationTime(timeStart, "видалення за ключем з TreeMap");
-
-        if (removedValue != null) {
-            System.out.println("Видалено запис з ключем '" + KEY_TO_SEARCH_AND_DELETE + "'. Власник був: " + removedValue);
+        if (KEY_TO_SEARCH_AND_DELETE.getNickname() == null) {
+            for (Map.Entry<Cat, String> entry : linkedHashMap.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getAge() != null && KEY_TO_SEARCH_AND_DELETE.getAge() != null
+                        && k.getAge().equals(KEY_TO_SEARCH_AND_DELETE.getAge())) {
+                    toRemove.add(k);
+                }
+            }
         } else {
-            System.out.println("Ключ '" + KEY_TO_SEARCH_AND_DELETE + "' не знайдено для видалення.");
+            String removedValue = linkedHashMap.remove(KEY_TO_SEARCH_AND_DELETE);
+            if (removedValue != null) {
+                System.out.println("Видалено запис з ключем '" + KEY_TO_SEARCH_AND_DELETE + "'. Власник був: " + removedValue);
+            }
         }
+
+        for (Cat k : toRemove) {
+            String removed = linkedHashMap.remove(k);
+            System.out.println("Видалено запис з ключем '" + k + "'. Власник був: " + removed);
+        }
+
+        PerformanceTracker.displayOperationTime(timeStart, "видалення за ключем з LinkedHashMap");
     }
 
     /**
-     * Видаляє записи з TreeMap за значенням.
+     * Видаляє записи з LinkedHashMap за значенням.
      */
-    void removeByValueFromTreeMap() {
+    void removeByValueFromLinkedHashMap() {
         long timeStart = System.nanoTime();
 
-        List<Pet> keysToRemove = new ArrayList<>();
-        for (Map.Entry<Pet, String> entry : treeMap.entrySet()) {
+        List<Cat> keysToRemove = new ArrayList<>();
+        for (Map.Entry<Cat, String> entry : linkedHashMap.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(VALUE_TO_SEARCH_AND_DELETE)) {
                 keysToRemove.add(entry.getKey());
             }
         }
         
-        for (Pet key : keysToRemove) {
-            treeMap.remove(key);
+        for (Cat key : keysToRemove) {
+            linkedHashMap.remove(key);
         }
 
-        PerformanceTracker.displayOperationTime(timeStart, "видалення за значенням з TreeMap");
+        PerformanceTracker.displayOperationTime(timeStart, "видалення за значенням з LinkedHashMap");
 
         System.out.println("Видалено " + keysToRemove.size() + " записів з власником '" + VALUE_TO_SEARCH_AND_DELETE + "'");
     }
@@ -505,34 +534,34 @@ public class BasicDataOperationUsingMap {
      * Головний метод для запуску програми.
      */
     public static void main(String[] args) {
-        // Створюємо початкові дані (ключ: Pet, значення: ім'я власника)
-        Hashtable<Pet, String> hashtable = new Hashtable<>();
-        hashtable.put(new Pet("Тум", "Сова вухата"), "Андрій");
-        hashtable.put(new Pet("Луна", "Полярна сова"), "Ірина");
-        hashtable.put(new Pet("Барсик", "Сова сіра"), "Олена");
-        hashtable.put(new Pet("Боні", "Сипуха"), "Олена");
-        hashtable.put(new Pet("Тайсон", "Сова болотяна"), "Ірина");
-        hashtable.put(new Pet("Барсик", "Сичик-горобець"), "Андрій");
-        hashtable.put(new Pet("Ґуфі", "Сова болотяна"), "Тимофій");
-        hashtable.put(new Pet("Боні", "Сова яструбина"), "Поліна");
-        hashtable.put(new Pet("Муся", "Сова білолиця"), "Стефанія");
-        hashtable.put(new Pet("Чіпо", "Сичик-хатник"), "Ярослав");
+        // Створюємо початкові дані (ключ: Cat{age}, значення: ім'я власника)
+    Hashtable<Cat, String> hashtable = new Hashtable<>();
+    hashtable.put(new Cat(4, "Тум"), "Ярослав");
+    hashtable.put(new Cat(12, "Луна"), "Олена");
+    hashtable.put(new Cat(2, "Барсик"), "Поліна");
+    hashtable.put(new Cat(5, "Боні"), "Тимофій");
+    hashtable.put(new Cat(3, "Тайсон"), "Стефанія");
+    hashtable.put(new Cat(9, "Ґуфі"), "Андрій");
+    hashtable.put(new Cat(7, "Муся"), "Ярослав");
+    hashtable.put(new Cat(8, "Чіпо"), "Поліна");
+    hashtable.put(new Cat(10, "Сніжок"), "Стефанія");
+    hashtable.put(new Cat(14, "Марс"), "Тимофій");
 
-        TreeMap<Pet, String> treeMap = new TreeMap<Pet, String>() {{
-            put(new Pet("Тум", "Сова вухата"), "Андрій");
-            put(new Pet("Луна", "Полярна сова"), "Ірина");
-            put(new Pet("Барсик", "Сова сіра"), "Олена");
-            put(new Pet("Боні", "Сипуха"), "Олена");
-            put(new Pet("Тайсон", "Сова болотяна"), "Ірина");
-            put(new Pet("Барсик", "Сичик-горобець"), "Андрій");
-            put(new Pet("Ґуфі", "Сова болотяна"), "Тимофій");
-            put(new Pet("Боні", "Сова яструбина"), "Поліна");
-            put(new Pet("Муся", "Сова білолиця"), "Стефанія");
-            put(new Pet("Чіпо", "Сичик-хатник"), "Ярослав");
+        LinkedHashMap<Cat, String> linkedHashMap = new LinkedHashMap<Cat, String>() {{
+            put(new Cat(4, "Тум"), "Ярослав");
+            put(new Cat(12, "Луна"), "Олена");
+            put(new Cat(2, "Барсик"), "Поліна");
+            put(new Cat(5, "Боні"), "Тимофій");
+            put(new Cat(3, "Тайсон"), "Стефанія");
+            put(new Cat(9, "Ґуфі"), "Андрій");
+            put(new Cat(7, "Муся"), "Ярослав");
+            put(new Cat(8, "Чіпо"), "Поліна");
+            put(new Cat(10, "Сніжок"), "Стефанія");
+            put(new Cat(14, "Марс"), "Тимофій");
         }};
 
         // Створюємо об'єкт і виконуємо операції
-        BasicDataOperationUsingMap operations = new BasicDataOperationUsingMap(hashtable, treeMap);
+        BasicDataOperationUsingMap operations = new BasicDataOperationUsingMap(hashtable, linkedHashMap);
         operations.executeDataOperations();
     }
 }
