@@ -1,48 +1,36 @@
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.LinkedList;
+import java.util.stream.Collectors;
 
 /**
- * Клас BasicDataOperationUsingList реалізує операції з колекціями типу ArrayList для даних LocalDateTime.
- * 
- * <p>Методи класу:</p>
- * <ul>
- *   <li>{@link #executeDataOperations()} - Виконує комплекс операцій з даними.</li>
- *   <li>{@link #performArraySorting()} - Упорядковує масив елементів LocalDateTime.</li>
- *   <li>{@link #findInArray()} - Здійснює пошук елемента в масиві LocalDateTime.</li>
- *   <li>{@link #locateMinMaxInArray()} - Визначає найменше і найбільше значення в масиві.</li>
- *   <li>{@link #sortList()} - Сортує колекцію List з LocalDateTime.</li>
- *   <li>{@link #findInList()} - Пошук конкретного значення в списку.</li>
- *   <li>{@link #locateMinMaxInList()} - Пошук мінімального і максимального значення в списку.</li>
- * </ul>
+ * Клас BasicDataOperationUsingList реалізує операції з колекціями типу LinkedList для даних LocalDate.
+ * Використовує Stream API для обробки даних.
  */
 public class BasicDataOperationUsingList {
-    private LocalDateTime dateTimeValueToSearch;
-    private LocalDateTime[] dateTimeArray;
-    private List<LocalDateTime> dateTimeList;
+    private LocalDate dateValueToSearch;
+    private LocalDate[] dateArray;
+    private List<LocalDate> dateList;
 
     /**
      * Конструктор, який iнiцiалiзує об'єкт з готовими даними.
-     * 
-     * @param dateTimeValueToSearch Значення для пошуку
-     * @param dateTimeArray Масив LocalDateTime
+     * * @param dateValueToSearch Значення для пошуку
+     * @param dateArray Масив LocalDate
      */
-    BasicDataOperationUsingList(LocalDateTime dateTimeValueToSearch, LocalDateTime[] dateTimeArray) {
-        this.dateTimeValueToSearch = dateTimeValueToSearch;
-        this.dateTimeArray = dateTimeArray;
-        this.dateTimeList = new ArrayList<>(Arrays.asList(dateTimeArray));
+    BasicDataOperationUsingList(LocalDate dateValueToSearch, LocalDate[] dateArray) {
+        this.dateValueToSearch = dateValueToSearch;
+        this.dateArray = dateArray;
+        // Використовуємо LinkedList згідно з вашим варіантом завдання
+        this.dateList = new LinkedList<>(Arrays.asList(dateArray));
     }
     
     /**
      * Виконує комплексні операції з структурами даних.
-     * 
-     * Метод завантажує масив і список об'єктів LocalDateTime, 
-     * здійснює сортування та пошукові операції.
      */
     public void executeDataOperations() {
-        // спочатку працюємо з колекцією List
+        // --- Робота з колекцією List ---
+        System.out.println("--- Операції з LinkedList ---");
         findInList();
         locateMinMaxInList();
         
@@ -51,7 +39,8 @@ public class BasicDataOperationUsingList {
         findInList();
         locateMinMaxInList();
 
-        // потім обробляємо масив дати та часу
+        // --- Робота з масивом ---
+        System.out.println("\n--- Операції з масивом ---");
         findInArray();
         locateMinMaxInArray();
 
@@ -61,113 +50,126 @@ public class BasicDataOperationUsingList {
         locateMinMaxInArray();
 
         // зберігаємо відсортований масив до окремого файлу
-        DataFileHandler.writeArrayToFile(dateTimeArray, BasicDataOperation.PATH_TO_DATA_FILE + ".sorted");
+        DataFileHandler.writeArrayToFile(dateArray, BasicDataOperation.PATH_TO_DATA_FILE + ".sorted");
     }
 
     /**
-     * Упорядковує масив об'єктів LocalDateTime за зростанням.
-     * Фіксує та виводить тривалість операції сортування в наносекундах.
+     * Упорядковує масив об'єктів LocalDate за зростанням (Stream API).
      */
     void performArraySorting() {
         long timeStart = System.nanoTime();
 
-        Arrays.sort(dateTimeArray);
+        dateArray = Arrays.stream(dateArray)
+                .sorted()
+                .toArray(LocalDate[]::new);
 
-        PerformanceTracker.displayOperationTime(timeStart, "упорядкування масиву дати i часу");
+        PerformanceTracker.displayOperationTime(timeStart, "упорядкування масиву (Stream API)");
     }
 
     /**
-     * Здійснює пошук конкретного значення в масиві дати та часу.
+     * Здійснює пошук конкретного значення в масиві (Stream API).
      */
     void findInArray() {
         long timeStart = System.nanoTime();
 
-        int position = Arrays.binarySearch(this.dateTimeArray, dateTimeValueToSearch);
+        // Логіка пошуку індексу через Stream
+        int position = Arrays.stream(dateArray)
+                .map(Arrays.asList(dateArray)::indexOf) // Отримуємо індекси
+                .filter(i -> dateValueToSearch.equals(dateArray[i])) // Шукаємо збіг
+                .findFirst()
+                .orElse(-1);
 
-        PerformanceTracker.displayOperationTime(timeStart, "пошук елемента в масивi дати i часу");
+        PerformanceTracker.displayOperationTime(timeStart, "пошук елемента в масивi (Stream API)");
 
         if (position >= 0) {
-            System.out.println("Елемент '" + dateTimeValueToSearch + "' знайдено в масивi за позицією: " + position);
+            System.out.println("Елемент '" + dateValueToSearch + "' знайдено в масивi за позицією: " + position);
         } else {
-            System.out.println("Елемент '" + dateTimeValueToSearch + "' відсутній в масиві.");
+            System.out.println("Елемент '" + dateValueToSearch + "' відсутній в масиві.");
         }
     }
 
     /**
-     * Визначає найменше та найбільше значення в масиві дати та часу.
+     * Визначає найменше та найбільше значення в масиві (Stream API).
      */
     void locateMinMaxInArray() {
-        if (dateTimeArray == null || dateTimeArray.length == 0) {
-            System.out.println("Масив є пустим або не ініціалізованим.");
+        if (dateArray == null || dateArray.length == 0) {
+            System.out.println("Масив є пустим.");
             return;
         }
 
         long timeStart = System.nanoTime();
 
-        LocalDateTime minValue = dateTimeArray[0];
-        LocalDateTime maxValue = dateTimeArray[0];
+        LocalDate minValue = Arrays.stream(dateArray)
+                .min(LocalDate::compareTo)
+                .orElse(null);
 
-        for (LocalDateTime currentDateTime : dateTimeArray) {
-            if (currentDateTime.isBefore(minValue)) {
-                minValue = currentDateTime;
-            }
-            if (currentDateTime.isAfter(maxValue)) {
-                maxValue = currentDateTime;
-            }
-        }
+        LocalDate maxValue = Arrays.stream(dateArray)
+                .max(LocalDate::compareTo)
+                .orElse(null);
 
-        PerformanceTracker.displayOperationTime(timeStart, "визначення мiнiмальної i максимальної дати в масивi");
+        PerformanceTracker.displayOperationTime(timeStart, "min/max в масивi (Stream API)");
 
         System.out.println("Найменше значення в масивi: " + minValue);
         System.out.println("Найбільше значення в масивi: " + maxValue);
     }
 
     /**
-     * Шукає конкретне значення дати та часу в колекції ArrayList.
+     * Шукає конкретне значення дати в колекції List (Stream API).
      */
     void findInList() {
         long timeStart = System.nanoTime();
 
-        int position = Collections.binarySearch(this.dateTimeList, dateTimeValueToSearch);
+        int position = dateList.stream()
+                .map(dateList::indexOf)
+                .filter(i -> dateValueToSearch.equals(dateList.get(i)))
+                .findFirst()
+                .orElse(-1);
 
-        PerformanceTracker.displayOperationTime(timeStart, "пошук елемента в List дати i часу");        
+        PerformanceTracker.displayOperationTime(timeStart, "пошук елемента в List (Stream API)");        
 
         if (position >= 0) {
-            System.out.println("Елемент '" + dateTimeValueToSearch + "' знайдено в ArrayList за позицією: " + position);
+            System.out.println("Елемент '" + dateValueToSearch + "' знайдено в List за позицією: " + position);
         } else {
-            System.out.println("Елемент '" + dateTimeValueToSearch + "' відсутній в ArrayList.");
+            System.out.println("Елемент '" + dateValueToSearch + "' відсутній в List.");
         }
     }
 
     /**
-     * Визначає найменше і найбільше значення в колекції ArrayList з датами.
+     * Визначає найменше і найбільше значення в колекції List (Stream API).
      */
     void locateMinMaxInList() {
-        if (dateTimeList == null || dateTimeList.isEmpty()) {
-            System.out.println("Колекція ArrayList є пустою або не ініціалізованою.");
+        if (dateList == null || dateList.isEmpty()) {
+            System.out.println("Колекція List є пустою.");
             return;
         }
 
         long timeStart = System.nanoTime();
 
-        LocalDateTime minValue = Collections.min(dateTimeList);
-        LocalDateTime maxValue = Collections.max(dateTimeList);
+        LocalDate minValue = dateList.stream()
+                .min(LocalDate::compareTo)
+                .orElse(null);
 
-        PerformanceTracker.displayOperationTime(timeStart, "визначення мiнiмальної i максимальної дати в List");
+        LocalDate maxValue = dateList.stream()
+                .max(LocalDate::compareTo)
+                .orElse(null);
+
+        PerformanceTracker.displayOperationTime(timeStart, "min/max в List (Stream API)");
 
         System.out.println("Найменше значення в List: " + minValue);
         System.out.println("Найбільше значення в List: " + maxValue);
     }
 
     /**
-     * Упорядковує колекцію List з об'єктами LocalDateTime за зростанням.
-     * Відстежує та виводить час виконання операції сортування.
+     * Упорядковує колекцію List за зростанням (Stream API).
      */
     void sortList() {
         long timeStart = System.nanoTime();
 
-        Collections.sort(dateTimeList);
+        // Сортуємо і збираємо назад у LinkedList
+        dateList = dateList.stream()
+                .sorted()
+                .collect(Collectors.toCollection(LinkedList::new));
 
-        PerformanceTracker.displayOperationTime(timeStart, "упорядкування ArrayList дати i часу");
+        PerformanceTracker.displayOperationTime(timeStart, "упорядкування List (Stream API)");
     }
 }
