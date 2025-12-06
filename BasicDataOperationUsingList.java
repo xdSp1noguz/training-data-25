@@ -1,3 +1,6 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -172,4 +175,42 @@ public class BasicDataOperationUsingList {
 
         PerformanceTracker.displayOperationTime(timeStart, "упорядкування List (Stream API)");
     }
+   public static void main(String[] args) {
+        String filePath = "list/LocalDate.data";
+
+        try {
+            // 1. Читаем файл, чистим от BOM и лишних пробелов
+            List<LocalDate> rawList = Files.lines(Paths.get(filePath))
+                    .map(line -> line.replace("\uFEFF", "").trim()) // Удаляем невидимый BOM
+                    .filter(line -> !line.isEmpty()) // Пропускаем пустые строки
+                    .map(LocalDate::parse) // Парсим
+                    .collect(Collectors.toList());
+
+            LocalDate[] datesFromFile = rawList.toArray(new LocalDate[0]);
+
+            // 2. Определяем дату для поиска
+            // Если вы передали аргумент при запуске (например, 2025-08-19), берем его
+            LocalDate searchTarget;
+            if (args.length > 0) {
+                searchTarget = LocalDate.parse(args[0]);
+                System.out.println("Шукаємо дату з аргументів (Ищем дату из аргументов): " + searchTarget);
+            } else {
+                searchTarget = LocalDate.now(); // Или текущая дата по умолчанию
+                System.out.println("Аргумент не передано, шукаємо поточну дату (Аргумент не передан): " + searchTarget);
+            }
+
+            System.out.println("Загружено дат из файла: " + datesFromFile.length);
+
+            // 3. Запуск логики
+            BasicDataOperationUsingList app = new BasicDataOperationUsingList(searchTarget, datesFromFile);
+            app.executeDataOperations();
+
+        } catch (IOException e) {
+            System.err.println("Помилка читання файлу: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Помилка даних (Ошибка данных): " + e.getMessage());
+            e.printStackTrace(); // Покажет, где именно упало
+        }
+    }
+
 }
