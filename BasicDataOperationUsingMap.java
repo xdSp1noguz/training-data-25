@@ -1,7 +1,8 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Hashtable;
+// import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,8 @@ public class BasicDataOperationUsingMap {
     private final String VALUE_TO_SEARCH_AND_DELETE = "Стефанія";
     private final String VALUE_TO_ADD = "Джон";
 
-    private Hashtable<Cat, String> hashtable;
+    // private Hashtable<Cat, String> hashtable;
+    private HashMap<Cat, String> hashtable;
     private LinkedHashMap<Cat, String> linkedHashMap;
 
     /**
@@ -141,11 +143,14 @@ public class BasicDataOperationUsingMap {
         }
 
         /**
-         * Формат виводу: Cat{age='4', nickname='Тум'}
+         * Формат виводу: Cat{age='4', nickname='Тум'} або Cat{age='16'} якщо nickname == null
          */
         @Override
         public String toString() {
-            return "Cat{age='" + (age != null ? age.toString() : "null") + "', nickname='" + (nickname != null ? nickname : "null") + "'}";
+            if (nickname == null) {
+                return "Cat{age='" + (age != null ? age.toString() : "null") + "'}";
+            }
+            return "Cat{age='" + (age != null ? age.toString() : "null") + "', nickname='" + nickname + "'}";
         }
     }
 
@@ -155,7 +160,7 @@ public class BasicDataOperationUsingMap {
      * @param hashtable Hashtable з початковими даними (ключ: Cat, значення: ім'я власника)
      * @param linkedHashMap LinkedHashMap з початковими даними (ключ: Cat, значення: ім'я власника)
      */
-    BasicDataOperationUsingMap(Hashtable<Cat, String> hashtable, LinkedHashMap<Cat, String> linkedHashMap) {
+    BasicDataOperationUsingMap(HashMap<Cat, String> hashtable, LinkedHashMap<Cat, String> linkedHashMap) {
         this.hashtable = hashtable;
         this.linkedHashMap = linkedHashMap;
     }
@@ -197,6 +202,10 @@ public class BasicDataOperationUsingMap {
         findByValueInLinkedHashMap();
 
         printLinkedHashMap();
+
+        // Сортуємо LinkedHashMap за ключами (використовує природний порядок Cat.compareTo())
+        sortLinkedHashMap();
+        printLinkedHashMap();
         
         addEntryToLinkedHashMap();
         
@@ -236,7 +245,7 @@ public class BasicDataOperationUsingMap {
         Collections.sort(sortedKeys);
         
         // Створюємо нову Hashtable з відсортованими ключами
-        Hashtable<Cat, String> sortedHashtable = new Hashtable<>();
+        HashMap<Cat, String> sortedHashtable = new HashMap<>();
         for (Cat key : sortedKeys) {
             sortedHashtable.put(key, hashtable.get(key));
         }
@@ -268,7 +277,19 @@ public class BasicDataOperationUsingMap {
                     break;
                 }
             }
+        } else if (KEY_TO_SEARCH_AND_DELETE.getAge() == null) {
+            // Пошук лише за nickname (age == null)
+            for (Map.Entry<Cat, String> entry : hashtable.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getNickname() != null
+                        && k.getNickname().equals(KEY_TO_SEARCH_AND_DELETE.getNickname())) {
+                    foundOwner = entry.getValue();
+                    foundKey = k;
+                    break;
+                }
+            }
         } else {
+            // Якщо задані і nickname і age — використовуємо containsKey (повне співпадіння)
             boolean found = hashtable.containsKey(KEY_TO_SEARCH_AND_DELETE);
             if (found) {
                 foundOwner = hashtable.get(KEY_TO_SEARCH_AND_DELETE);
@@ -322,11 +343,29 @@ public class BasicDataOperationUsingMap {
     void addEntryToHashtable() {
         long timeStart = System.nanoTime();
 
-        hashtable.put(KEY_TO_ADD, VALUE_TO_ADD);
+        // Дозволяємо додавання як по age, так і по nickname (якщо age == null)
+        if (KEY_TO_ADD.getNickname() != null && KEY_TO_ADD.getAge() == null) {
+            // Перевіряємо чи вже існує ключ з таким nickname
+            boolean exists = false;
+            for (Cat k : hashtable.keySet()) {
+                if (k != null && k.getNickname() != null && k.getNickname().equals(KEY_TO_ADD.getNickname())) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (exists) {
+                System.out.println("Ключ з nickname='" + KEY_TO_ADD.getNickname() + "' вже існує в Hashtable. Додавання пропущено.");
+            } else {
+                hashtable.put(KEY_TO_ADD, VALUE_TO_ADD);
+                System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
+            }
+        } else {
+            // Стандартне додавання (за age або за повним ключем)
+            hashtable.put(KEY_TO_ADD, VALUE_TO_ADD);
+            System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
+        }
 
         PerformanceTracker.displayOperationTime(timeStart, "додавання запису до Hashtable");
-
-        System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
     }
 
     /**
@@ -399,6 +438,27 @@ public class BasicDataOperationUsingMap {
     }
 
     /**
+     * Сортує linkedHashMap за ключами за природним порядком Cat (Cat.compareTo()).
+     * Результат — нова LinkedHashMap з відсортованими парами.
+     */
+    private void sortLinkedHashMap() {
+        long timeStart = System.nanoTime();
+
+        // Збираємо ключі і сортуємо їх за natural order (Cat.compareTo)
+        List<Cat> sortedKeys = new ArrayList<>(linkedHashMap.keySet());
+        Collections.sort(sortedKeys);
+
+        // Відтворюємо LinkedHashMap у відсортованому порядку
+        LinkedHashMap<Cat, String> sorted = new LinkedHashMap<>();
+        for (Cat k : sortedKeys) {
+            sorted.put(k, linkedHashMap.get(k));
+        }
+        linkedHashMap = sorted;
+
+        PerformanceTracker.displayOperationTime(timeStart, "сортування LinkedHashMap за ключами");
+    }
+
+    /**
      * Здійснює пошук елемента за ключем в LinkedHashMap.
      * Використовує послідовний перебір елементів.
      */
@@ -412,6 +472,17 @@ public class BasicDataOperationUsingMap {
                 Cat k = entry.getKey();
                 if (k != null && k.getAge() != null && KEY_TO_SEARCH_AND_DELETE.getAge() != null
                         && k.getAge().equals(KEY_TO_SEARCH_AND_DELETE.getAge())) {
+                    foundOwner = entry.getValue();
+                    foundKey = k;
+                    break;
+                }
+            }
+        } else if (KEY_TO_SEARCH_AND_DELETE.getAge() == null) {
+            // Пошук лише за nickname (age == null)
+            for (Map.Entry<Cat, String> entry : linkedHashMap.entrySet()) {
+                Cat k = entry.getKey();
+                if (k != null && k.getNickname() != null
+                        && k.getNickname().equals(KEY_TO_SEARCH_AND_DELETE.getNickname())) {
                     foundOwner = entry.getValue();
                     foundKey = k;
                     break;
@@ -471,11 +542,26 @@ public class BasicDataOperationUsingMap {
     void addEntryToLinkedHashMap() {
         long timeStart = System.nanoTime();
 
-        linkedHashMap.put(KEY_TO_ADD, VALUE_TO_ADD);
+        if (KEY_TO_ADD.getNickname() != null && KEY_TO_ADD.getAge() == null) {
+            boolean exists = false;
+            for (Cat k : linkedHashMap.keySet()) {
+                if (k != null && k.getNickname() != null && k.getNickname().equals(KEY_TO_ADD.getNickname())) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (exists) {
+                System.out.println("Ключ з nickname='" + KEY_TO_ADD.getNickname() + "' вже існує в LinkedHashMap. Додавання пропущено.");
+            } else {
+                linkedHashMap.put(KEY_TO_ADD, VALUE_TO_ADD);
+                System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "' в LinkedHashMap");
+            }
+        } else {
+            linkedHashMap.put(KEY_TO_ADD, VALUE_TO_ADD);
+            System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "' в LinkedHashMap");
+        }
 
         PerformanceTracker.displayOperationTime(timeStart, "додавання запису до LinkedHashMap");
-
-        System.out.println("Додано новий запис: Cat='" + KEY_TO_ADD + "', власник='" + VALUE_TO_ADD + "'");
     }
 
     /**
@@ -520,47 +606,41 @@ public class BasicDataOperationUsingMap {
                 keysToRemove.add(entry.getKey());
             }
         }
-        
+
         for (Cat key : keysToRemove) {
             linkedHashMap.remove(key);
         }
 
         PerformanceTracker.displayOperationTime(timeStart, "видалення за значенням з LinkedHashMap");
 
-        System.out.println("Видалено " + keysToRemove.size() + " записів з власником '" + VALUE_TO_SEARCH_AND_DELETE + "'");
+        System.out.println("Видалено " + keysToRemove.size() + " записів з власником '" + VALUE_TO_SEARCH_AND_DELETE + "' в LinkedHashMap");
     }
 
-    /**
-     * Головний метод для запуску програми.
-     */
     public static void main(String[] args) {
-        // Створюємо початкові дані (ключ: Cat{age}, значення: ім'я власника)
-    Hashtable<Cat, String> hashtable = new Hashtable<>();
-    hashtable.put(new Cat(4, "Тум"), "Ярослав");
-    hashtable.put(new Cat(12, "Луна"), "Олена");
-    hashtable.put(new Cat(2, "Барсик"), "Поліна");
-    hashtable.put(new Cat(5, "Боні"), "Тимофій");
-    hashtable.put(new Cat(3, "Тайсон"), "Стефанія");
-    hashtable.put(new Cat(9, "Ґуфі"), "Андрій");
-    hashtable.put(new Cat(7, "Муся"), "Ярослав");
-    hashtable.put(new Cat(8, "Чіпо"), "Поліна");
-    hashtable.put(new Cat(10, "Сніжок"), "Стефанія");
-    hashtable.put(new Cat(14, "Марс"), "Тимофій");
+        HashMap<Cat, String> hashtable = new HashMap<>();
+        hashtable.put(new Cat(4, "Тум"), "Ярослав");
+        hashtable.put(new Cat(12, "Луна"), "Олена");
+        hashtable.put(new Cat(2, "Барсик"), "Поліна");
+        hashtable.put(new Cat(5, "Боні"), "Тимофій");
+        hashtable.put(new Cat(3, "Тайсон"), "Стефанія");
+        hashtable.put(new Cat(9, "Ґуфі"), "Андрій");
+        hashtable.put(new Cat(7, "Муся"), "Ярослав");
+        hashtable.put(new Cat(8, "Чіпо"), "Поліна");
+        hashtable.put(new Cat(10, "Сніжок"), "Стефанія");
+        hashtable.put(new Cat(14, "Марс"), "Тимофій");
 
-        LinkedHashMap<Cat, String> linkedHashMap = new LinkedHashMap<Cat, String>() {{
-            put(new Cat(4, "Тум"), "Ярослав");
-            put(new Cat(12, "Луна"), "Олена");
-            put(new Cat(2, "Барсик"), "Поліна");
-            put(new Cat(5, "Боні"), "Тимофій");
-            put(new Cat(3, "Тайсон"), "Стефанія");
-            put(new Cat(9, "Ґуфі"), "Андрій");
-            put(new Cat(7, "Муся"), "Ярослав");
-            put(new Cat(8, "Чіпо"), "Поліна");
-            put(new Cat(10, "Сніжок"), "Стефанія");
-            put(new Cat(14, "Марс"), "Тимофій");
-        }};
+        LinkedHashMap<Cat, String> linkedHashMap = new LinkedHashMap<>();
+        linkedHashMap.put(new Cat(4, "Тум"), "Ярослав");
+        linkedHashMap.put(new Cat(12, "Луна"), "Олена");
+        linkedHashMap.put(new Cat(2, "Барсик"), "Поліна");
+        linkedHashMap.put(new Cat(5, "Боні"), "Тимофій");
+        linkedHashMap.put(new Cat(3, "Тайсон"), "Стефанія");
+        linkedHashMap.put(new Cat(9, "Ґуфі"), "Андрій");
+        linkedHashMap.put(new Cat(7, "Муся"), "Ярослав");
+        linkedHashMap.put(new Cat(8, "Чіпо"), "Поліна");
+        linkedHashMap.put(new Cat(10, "Сніжок"), "Стефанія");
+        linkedHashMap.put(new Cat(14, "Марс"), "Тимофій");
 
-        // Створюємо об'єкт і виконуємо операції
         BasicDataOperationUsingMap operations = new BasicDataOperationUsingMap(hashtable, linkedHashMap);
         operations.executeDataOperations();
     }
