@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "BasicDataOperationUsingMap",
+            "request": "launch",
+            "mainClass": "BasicDataOperationUsingMap",
+            "projectName": "training-data-25_de209b35"
+        },
+        {
+            "type": "java",
             "name": "BasicDataOperation",
             "request": "launch",
             "mainClass": "${file}",
