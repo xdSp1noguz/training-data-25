@@ -1,27 +1,29 @@
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDate;
+import java.time.LocalDateTime; // CHANGED: Імпорт змінено на LocalDateTime
 import java.util.Arrays;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.stream.Collectors;
 
 /**
- * Клас BasicDataOperationUsingList реалізує операції з колекціями типу LinkedList для даних LocalDate.
+ * Клас BasicDataOperationUsingList реалізує операції з колекціями типу LinkedList для даних LocalDateTime.
  * Використовує Stream API для обробки даних.
  */
 public class BasicDataOperationUsingList {
-    private LocalDate dateValueToSearch;
-    private LocalDate[] dateArray;
-    private List<LocalDate> dateList;
+    // CHANGED: Всі поля змінено на LocalDateTime
+    private LocalDateTime dateValueToSearch;
+    private LocalDateTime[] dateArray;
+    private List<LocalDateTime> dateList;
 
     /**
      * Конструктор, який iнiцiалiзує об'єкт з готовими даними.
-     * * @param dateValueToSearch Значення для пошуку
-     * @param dateArray Масив LocalDate
+     * @param dateValueToSearch Значення для пошуку
+     * @param dateArray Масив LocalDateTime
      */
-    BasicDataOperationUsingList(LocalDate dateValueToSearch, LocalDate[] dateArray) {
+    // CHANGED: Аргументи конструктора тепер приймають LocalDateTime
+    BasicDataOperationUsingList(LocalDateTime dateValueToSearch, LocalDateTime[] dateArray) {
         this.dateValueToSearch = dateValueToSearch;
         this.dateArray = dateArray;
         // Використовуємо LinkedList згідно з вашим варіантом завдання
@@ -57,14 +59,14 @@ public class BasicDataOperationUsingList {
     }
 
     /**
-     * Упорядковує масив об'єктів LocalDate за зростанням (Stream API).
+     * Упорядковує масив об'єктів LocalDateTime за зростанням (Stream API).
      */
     void performArraySorting() {
         long timeStart = System.nanoTime();
 
         dateArray = Arrays.stream(dateArray)
                 .sorted()
-                .toArray(LocalDate[]::new);
+                .toArray(LocalDateTime[]::new); // CHANGED: Створюємо масив LocalDateTime
 
         PerformanceTracker.displayOperationTime(timeStart, "упорядкування масиву (Stream API)");
     }
@@ -102,12 +104,13 @@ public class BasicDataOperationUsingList {
 
         long timeStart = System.nanoTime();
 
-        LocalDate minValue = Arrays.stream(dateArray)
-                .min(LocalDate::compareTo)
+        // CHANGED: compareTo тепер працює з LocalDateTime
+        LocalDateTime minValue = Arrays.stream(dateArray)
+                .min(LocalDateTime::compareTo)
                 .orElse(null);
 
-        LocalDate maxValue = Arrays.stream(dateArray)
-                .max(LocalDate::compareTo)
+        LocalDateTime maxValue = Arrays.stream(dateArray)
+                .max(LocalDateTime::compareTo)
                 .orElse(null);
 
         PerformanceTracker.displayOperationTime(timeStart, "min/max в масивi (Stream API)");
@@ -148,12 +151,12 @@ public class BasicDataOperationUsingList {
 
         long timeStart = System.nanoTime();
 
-        LocalDate minValue = dateList.stream()
-                .min(LocalDate::compareTo)
+        LocalDateTime minValue = dateList.stream()
+                .min(LocalDateTime::compareTo)
                 .orElse(null);
 
-        LocalDate maxValue = dateList.stream()
-                .max(LocalDate::compareTo)
+        LocalDateTime maxValue = dateList.stream()
+                .max(LocalDateTime::compareTo)
                 .orElse(null);
 
         PerformanceTracker.displayOperationTime(timeStart, "min/max в List (Stream API)");
@@ -175,28 +178,30 @@ public class BasicDataOperationUsingList {
 
         PerformanceTracker.displayOperationTime(timeStart, "упорядкування List (Stream API)");
     }
+
    public static void main(String[] args) {
-        String filePath = "list/LocalDate.data";
+        String filePath = "list/LocalDate.data"; // Перевірте, чи файл містить час, або змініть логіку парсингу
 
         try {
             // 1. Читаем файл, чистим от BOM и лишних пробелов
-            List<LocalDate> rawList = Files.lines(Paths.get(filePath))
+            List<LocalDateTime> rawList = Files.lines(Paths.get(filePath))
                     .map(line -> line.replace("\uFEFF", "").trim()) // Удаляем невидимый BOM
                     .filter(line -> !line.isEmpty()) // Пропускаем пустые строки
-                    .map(LocalDate::parse) // Парсим
+                    // CHANGED: Парсинг в LocalDateTime. 
+                    // УВАГА: Якщо у файлі лише дати (2023-01-01), використовуйте .map(d -> LocalDate.parse(d).atStartOfDay())
+                    .map(LocalDateTime::parse) 
                     .collect(Collectors.toList());
 
-            LocalDate[] datesFromFile = rawList.toArray(new LocalDate[0]);
+            LocalDateTime[] datesFromFile = rawList.toArray(new LocalDateTime[0]);
 
             // 2. Определяем дату для поиска
-            // Если вы передали аргумент при запуске (например, 2025-08-19), берем его
-            LocalDate searchTarget;
+            LocalDateTime searchTarget;
             if (args.length > 0) {
-                searchTarget = LocalDate.parse(args[0]);
-                System.out.println("Шукаємо дату з аргументів (Ищем дату из аргументов): " + searchTarget);
+                searchTarget = LocalDateTime.parse(args[0]);
+                System.out.println("Шукаємо дату з аргументів: " + searchTarget);
             } else {
-                searchTarget = LocalDate.now(); // Или текущая дата по умолчанию
-                System.out.println("Аргумент не передано, шукаємо поточну дату (Аргумент не передан): " + searchTarget);
+                searchTarget = LocalDateTime.now(); 
+                System.out.println("Аргумент не передано, шукаємо поточну дату: " + searchTarget);
             }
 
             System.out.println("Загружено дат из файла: " + datesFromFile.length);
@@ -208,9 +213,8 @@ public class BasicDataOperationUsingList {
         } catch (IOException e) {
             System.err.println("Помилка читання файлу: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Помилка даних (Ошибка данных): " + e.getMessage());
-            e.printStackTrace(); // Покажет, где именно упало
+            System.err.println("Помилка даних: " + e.getMessage());
+            e.printStackTrace(); 
         }
     }
-
 }
