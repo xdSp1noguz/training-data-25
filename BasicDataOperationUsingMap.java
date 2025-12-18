@@ -3,41 +3,13 @@ import java.util.stream.Collectors;
 
 public class BasicDataOperationUsingMap {
 
-    // ИСПРАВЛЕНИЕ: Используем обычный класс вместо record, чтобы работало на старой Java
-    public static class Cat {
-        private final Integer age;
-        private final String nickname;
+    /**
+     * Опис домашньої тварини через record.
+     * Автоматично створює фінальні поля, конструктор та методи порівняння.
+     */
+    public record Cat(Integer age, String nickname) {}
 
-        public Cat(Integer age, String nickname) {
-            this.age = age;
-            this.nickname = nickname;
-        }
-
-        public Integer age() { return age; }
-        public String nickname() { return nickname; }
-
-        @Override
-        public String toString() {
-            return "Cat{age='" + age + "', nickname='" + nickname + "'}";
-        }
-
-        // Обязательно для корректной работы HashMap
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Cat cat = (Cat) o;
-            return Objects.equals(age, cat.age) &&
-                   Objects.equals(nickname, cat.nickname);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(age, nickname);
-        }
-    }
-
-    // Вспомогательный класс для замеров времени
+    // Допоміжний клас для замірів часу
     static class PerformanceTracker {
         public static void displayOperationTime(long start, String operation) {
             long duration = System.nanoTime() - start;
@@ -45,18 +17,17 @@ public class BasicDataOperationUsingMap {
         }
     }
 
-    // Компаратор
+    // Компаратор (тепер звертаємось до методів record: nickname() та age())
     private static final Comparator<Cat> CAT_COMPARATOR =
             Comparator.comparing(Cat::nickname, Comparator.reverseOrder())
                     .thenComparing(Cat::age);
 
-    // Данные
+    // Дані для операцій
     private final Cat KEY_TO_ADD = new Cat(16, "Сем");
     private final String VALUE_TO_ADD = "Джон";
     private final Cat KEY_TO_SEARCH_AND_DELETE = new Cat(2, "Барсик");
     private final String VALUE_TO_SEARCH_AND_DELETE = "Стефанія";
 
-    // Мапы
     private HashMap<Cat, String> hashMap;
     private LinkedHashMap<Cat, String> linkedHashMap;
 
